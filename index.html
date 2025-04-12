@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #0a192f;
+            color: #fff;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 90%;
+            max-width: 1200px;
+            height: 500px;
+            margin: auto;
+            background: #1b2a49;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .whole {
+            margin: 8vh 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="whole">
+        <h1>📈 Real-Time Stock Market Tracker</h1>
+        <div class="chart-container">
+            <canvas id="stockChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = "cv1an11r01qhkk81nmsgcv1an11r01qhkk81nmt0";
+        const stockSymbols = ["AAPL", "GOOGL", "MSFT", "TSLA"];
+        const API_URL = (symbol) => `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`;
+
+        const ctx = document.getElementById("stockChart").getContext("2d");
+        let stockChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: stockSymbols.map((symbol, index) => ({
+                    label: `${symbol} Price ($)`,
+                    borderColor: ["#22d3ee", "#f87171", "#facc15", "#34d399"][index],
+                    backgroundColor: "rgba(34, 211, 238, 0.2)",
+                    data: []
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: "#1b2a49" } },
+                    y: { grid: { color: "#1b2a49" }, beginAtZero: false }
+                }
+            }
+        });
+
+        async function fetchStockPrices() {
+            try {
+                const time = new Date().toLocaleTimeString();
+                console.log(`Fetching stock prices at: ${time}`);
+
+                const prices = await Promise.all(stockSymbols.map(async (symbol) => {
+                    const response = await fetch(API_URL(symbol));
+                    const data = await response.json();
+
+                    console.log(`API Response for ${symbol}:`, data);
+
+                    if (!data || typeof data.c !== "number") {
+                        console.error(`Invalid data for ${symbol}:`, data);
+                        return null;
+                    }
+
+                    let price = data.c + (Math.random() * 5 - 2.5);
+                    return Math.max(price, 1);
+                }));
+
+                if (prices.includes(null)) return;
+
+                stockChart.data.labels.push(time);
+                stockSymbols.forEach((symbol, index) => {
+                    stockChart.data.datasets[index].data.push(prices[index]);
+
+                    if (stockChart.data.datasets[index].data.length > 20) {
+                        stockChart.data.datasets[index].data.shift();
+                    }
+                });
+
+                if (stockChart.data.labels.length > 20) {
+                    stockChart.data.labels.shift();
+                }
+
+                stockChart.update();
+            } catch (error) {
+                console.error("Error fetching stock prices:", error);
+            }
+        }
+
+        fetchStockPrices();
+        setInterval(fetchStockPrices, 15000);
+    </script>
+</body>
+
+</html>
