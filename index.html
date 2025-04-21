@@ -2,27 +2,77 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Market Tracker</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock Market Price Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
+            background: #ffffff;
+            color: #1f2937;
             text-align: center;
-            background: #0a192f;
-            color: #fff;
+        }
+
+        h1 {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #111827;
+            font-size: 40px;
+        }
+
+        .whole {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+            padding: 0 20px;
         }
 
         .chart-container {
-            position: relative;
-            width: 90%;
-            max-width: 1200px;
+            width: 70vw;
             height: 500px;
-            margin: auto;
-            background: #1b2a49;
-            padding: 10px;
+            margin: 10px;
+            background: #f3f4f6;
             border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .price {
+            width: 20vw;
+            height: 500px;
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding-left: 20px;
+        }
+
+        .price ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .price li {
+            font-size: 18px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .price img {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
         }
 
         canvas {
@@ -30,18 +80,45 @@
             height: 100% !important;
         }
 
-        .whole {
-            margin: 8vh 0;
-            width: 100%;
+        .grow {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 34px;
+        }
+
+        .boxes {
+            display: flex;
+            gap: 26px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box {
+            box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+            padding: 7px 15px;
+            background: #eeeeee;
+            border-radius: 6px;
+        }
+
+        .box:hover {
+            color: #0075D1;
         }
     </style>
 </head>
 
 <body>
+    <h1>Stock Market Price Tracker</h1>
     <div class="whole">
-        <h1>📈 Real-Time Stock Market Tracker</h1>
         <div class="chart-container">
             <canvas id="stockChart"></canvas>
+        </div>
+        <div class="price">
+            <ul id="stockPriceList">
+                <li id="AAPL"><img src="increased.png" alt=""> Apple - $0.00</li>
+                <li id="GOOGL"><img src="increased.png" alt=""> Google - $0.00</li>
+                <li id="MSFT"><img src="increased.png" alt=""> Microsoft - $0.00</li>
+                <li id="TSLA"><img src="increased.png" alt=""> Tesla - $0.00</li>
+            </ul>
         </div>
     </div>
 
@@ -49,6 +126,31 @@
         const API_KEY = "cv1an11r01qhkk81nmsgcv1an11r01qhkk81nmt0";
         const stockSymbols = ["AAPL", "GOOGL", "MSFT", "TSLA"];
         const API_URL = (symbol) => `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`;
+        let previousPrices = {};
+        console.log("Previous prices:", previousPrices)
+
+        const latestPricePlugin = {
+            id: 'latestPricePlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (!meta.data.length) return;
+                    console.log("meta", meta)
+                    const lastPoint = meta.data[meta.data.length - 1];
+                    console.log("lastpoint",lastPoint);
+                    
+                    const value = dataset.data[dataset.data.length - 1];
+                    ctx.save();
+                    ctx.font = "12px Arial";
+                    ctx.fillStyle = dataset.borderColor;
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(`$${value.toFixed(2)}`, lastPoint.x + 8, lastPoint.y);
+                    ctx.restore();
+                });
+            }
+        };
 
         const ctx = document.getElementById("stockChart").getContext("2d");
         let stockChart = new Chart(ctx, {
@@ -57,57 +159,94 @@
                 labels: [],
                 datasets: stockSymbols.map((symbol, index) => ({
                     label: `${symbol} Price ($)`,
-                    borderColor: ["#22d3ee", "#f87171", "#facc15", "#34d399"][index],
-                    backgroundColor: "rgba(34, 211, 238, 0.2)",
-                    data: []
-                }))
+                    borderColor: ["#3b82f6", "#ef4444", "#facc15", "#10b981"][index],
+                    backgroundColor: "rgba(59, 130, 246, 0.2)",
+                    data: [],
+                })),
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: { grid: { color: "#1b2a49" } },
-                    y: { grid: { color: "#1b2a49" }, beginAtZero: false }
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: "#374151" }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: "#374151" },
+                        beginAtZero: false
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: "#1f2937" }
+                    }
                 }
-            }
+            },
+            plugins: [latestPricePlugin]
         });
 
         async function fetchStockPrices() {
             try {
                 const time = new Date().toLocaleTimeString();
-                console.log(`Fetching stock prices at: ${time}`);
+                console.log(`\nFetching stock prices at: ${time}`);
 
-                const prices = await Promise.all(stockSymbols.map(async (symbol) => {
-                    const response = await fetch(API_URL(symbol));
-                    const data = await response.json();
+                const prices = await Promise.all(
+                    stockSymbols.map(async (symbol) => {
+                        const res = await fetch(API_URL(symbol));
+                        const data = await res.json();
+                        console.log(`${symbol} API data:`, data);
 
-                    console.log(`API Response for ${symbol}:`, data);
+                        let currentPrice = +(data.c + (Math.random() * 5 - 2.5)).toFixed(3);
+                        currentPrice = Math.max(currentPrice, 1);
 
-                    if (!data || typeof data.c !== "number") {
-                        console.error(`Invalid data for ${symbol}:`, data);
-                        return null;
-                    }
+                        const li = document.getElementById(symbol);
+                        const img = li.querySelector("img");
+                        const name = li.textContent.split(" - ")[0].trim();
 
-                    let price = data.c + (Math.random() * 5 - 2.5);
-                    return Math.max(price, 1);
-                }));
+                        if (previousPrices[symbol] !== undefined) {
+                            if (currentPrice > previousPrices[symbol]) {
+                                img.src = "increased.png";
+                                img.alt = "Up";
+                                console.log(`${symbol} increased from $${previousPrices[symbol]} to $${currentPrice}`);
+                            } else if (currentPrice < previousPrices[symbol]) {
+                                img.src = "trending-down.png";
+                                img.alt = "Down";
+                                console.log(`${symbol} decreased from $${previousPrices[symbol]} to $${currentPrice}`);
+                            } else {
+                                console.log(`⏸${symbol} price stayed the same at $${currentPrice}`);
+                            }
+                        } else {
+                            console.log(`First time price for ${symbol}: $${currentPrice}`);
+                        }
 
-                if (prices.includes(null)) return;
+                        previousPrices[symbol] = currentPrice;
+                        li.innerHTML = `<img src="${img.src}" alt="${img.alt}"> ${name} - $${currentPrice}`;
+
+                        return currentPrice;
+                    })
+                );
+
+                if (prices.includes(null)) {
+                    console.warn("One or more prices returned null. Skipping update.");
+                    return;
+                }
 
                 stockChart.data.labels.push(time);
                 stockSymbols.forEach((symbol, index) => {
                     stockChart.data.datasets[index].data.push(prices[index]);
-
-                    if (stockChart.data.datasets[index].data.length > 20) {
+                    if (stockChart.data.datasets[index].data.length > 10) {
                         stockChart.data.datasets[index].data.shift();
                     }
                 });
 
-                if (stockChart.data.labels.length > 20) {
+                if (stockChart.data.labels.length > 10) {
                     stockChart.data.labels.shift();
                 }
 
                 stockChart.update();
+                console.log("Chart updated.");
             } catch (error) {
                 console.error("Error fetching stock prices:", error);
             }
@@ -116,6 +255,7 @@
         fetchStockPrices();
         setInterval(fetchStockPrices, 15000);
     </script>
+
 </body>
 
 </html>
